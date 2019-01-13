@@ -1,0 +1,51 @@
+---
+title: "Developing Data Products - Assignment 1"
+author: "Elizabeth Storm"
+date: "January 13, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+crash <- read.csv(url("https://data.cambridgema.gov/api/views/ybny-g9cv/rows.csv?accessType=DOWNLOAD"))
+
+colnames(crash) <- c("number","date_time","day_of_week","object1","object2",
+                        "street_number","street_name","cross_street","Location",
+                        "lat","lng","coordinate")
+crash <- crash[!is.na(crash$lat),]
+crash <- crash[!is.na(crash$lng),]
+library(lubridate)
+crash$day <- mdy_hms(crash$date_time)
+
+crash$year <- year(crash$day)
+
+crash$type <- ifelse(crash$object1 %in% c('Auto','PASSENGER CAR')
+                      ,'Car',
+                      ifelse(crash$object1 %in% c('LIGHT TRUCK(VAN, MINI VAN, PICK-UP, SPORT UTILITY)')
+                        ,'Van/SUV',
+                        ifelse(crash$object1 %in% c('Truck')
+                               ,'Truck',
+                               ifelse(crash$object1 %in% c('Taxi')
+                                      ,'Taxi','Other'))))
+crash$popup = paste("Type: ",crash$type,"; Year: ", crash$year,"; Day of Week: ", crash$day_of_week)
+
+
+```
+
+This is using data from the city of Cambridge, MA. List of crashes involving motor vehicles, bicycles and/or pedestrians reported in the City of Cambridge from January 2010 through June 2016 More data can be found on  <https://data.cambridgema.gov/Public-Safety/Police-Department-Crash-Data-Historical/ybny-g9cv>.
+
+
+
+## Map of Crash Data for all years
+
+This gives a high level overview of the crash data.
+
+```{r mapplot, echo=FALSE, warning=FALSE}
+library(leaflet)
+crash %>%
+        leaflet() %>% 
+        addTiles() %>%
+        addMarkers(lat=crash$lat, lng=crash$lng, popup= crash$popup, 
+                   clusterOptions = markerClusterOptions())
+
+```
