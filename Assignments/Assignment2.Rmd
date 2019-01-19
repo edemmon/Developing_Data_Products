@@ -1,0 +1,50 @@
+---
+title: "Developing Data Products - Assignment 2"
+author: "Elizabeth Storm"
+date: "January 19, 2019"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+crash <- read.csv(url("https://data.cambridgema.gov/api/views/ybny-g9cv/rows.csv?accessType=DOWNLOAD"))
+
+colnames(crash) <- c("number","date_time","day_of_week","object1","object2",
+                     "street_number","street_name","cross_street","Location",
+                     "lat","lng","coordinate")
+crash <- crash[!is.na(crash$lat),]
+crash <- crash[!is.na(crash$lng),]
+library(lubridate)
+crash$day <- mdy_hms(crash$date_time)
+
+crash$year <- year(crash$day)
+
+crash$type <- ifelse(crash$object1 %in% c('Auto','PASSENGER CAR')
+                     ,'Car',
+                     ifelse(crash$object1 %in% c('LIGHT TRUCK(VAN, MINI VAN, PICK-UP, SPORT UTILITY)')
+                            ,'Van/SUV',
+                            ifelse(crash$object1 %in% c('Truck')
+                                   ,'Truck',
+                                   ifelse(crash$object1 %in% c('Taxi')
+                                          ,'Taxi','Other'))))
+crash2 <- crash[which(crash$year == 2013),]
+library(dplyr)
+library(tidyr)
+new <- crash2 %>%
+        group_by(year, day, type, day_of_week) %>%
+        summarize(count=n())
+library(plotly)
+```
+
+##Plot of Cabridge, MA Crashes
+This is a plot of the data only from year 2013 by type of vehicle.
+
+
+```{r plot1, echo=FALSE, warning=FALSE}
+plot_ly(new, x = ~day, color = ~type, type = "scatter", mode="markers")
+```
+
+##Overview of project
+This is using data from the city of Cambridge, MA. List of crashes involving motor vehicles, bicycles and/or pedestrians reported in the City of Cambridge from January 2010 through June 2016 More data can be found on  <https://data.cambridgema.gov/Public-Safety/Police-Department-Crash-Data-Historical/ybny-g9cv>.
+
