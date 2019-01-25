@@ -1,0 +1,85 @@
+Analyze Crash Data in Cambridge, MA 
+========================================================
+author: Elizabeth Storm
+date: January 24, 2019
+autosize: true
+
+Overview:
+========================================================
+
+Say you are moving to Cambridge, MA or already live there. What should be your route to work?
+
+- Probably should avoid that intersection that has tons of crashes.
+
+Maybe you are in charge of the police departement. Where should you send patrol cars? 
+
+- Probably want to monitor that intersection that has tons of crashes.
+
+Either situation you'll want to analyze the crash data over the past several years. This tool is for you! 
+
+Summary of tool functions
+========================================================
+This tool will allow you to explore crash data from Cambridge:
+
+- By Type of Vehicle
+- Looking at Maps
+- Across Years
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(leaflet)
+library(shiny)
+crash <- read.csv(url("https://data.cambridgema.gov/api/views/ybny-g9cv/rows.csv?accessType=DOWNLOAD"))
+
+colnames(crash) <- c("number","date_time","day_of_week","object1","object2",
+                        "street_number","street_name","cross_street","Location",
+                        "lat","lng","coordinate")
+crash <- crash[!is.na(crash$lat),]
+crash <- crash[!is.na(crash$lng),]
+library(lubridate)
+crash$day <- mdy_hms(crash$date_time)
+
+crash$year <- year(crash$day)
+
+crash$type <- ifelse(crash$object1 %in% c('Auto','PASSENGER CAR')
+                      ,'Car',
+                      ifelse(crash$object1 %in% c('LIGHT TRUCK(VAN, MINI VAN, PICK-UP, SPORT UTILITY)')
+                        ,'Van/SUV',
+                        ifelse(crash$object1 %in% c('Truck')
+                               ,'Truck',
+                               ifelse(crash$object1 %in% c('Taxi')
+                                      ,'Taxi','Other'))))
+crash$popup = paste("Type: ",crash$type,"; Year: ", crash$year,"; Day of Week: ", crash$day_of_week)
+new <- crash %>%
+                group_by(year, day, type, day_of_week) %>%
+                summarize(count=n())
+
+```
+
+
+Example:
+========================================================
+Say you want to see the trend in crashes over time:
+
+```{r, echo=FALSE}
+counts <-table(new$year)
+          barplot(counts, main="Distribution of All Crashes across Years",
+                  xlab="Year")
+```
+
+Looks like it has been coming down over time for the city. Good news if you are the police chief. 
+
+Example (continued)
+========================================================
+But you want to see it just for taxi's. 
+
+```{r, echo=FALSE}
+new2 <- new[which(new$type == "Taxi"),]
+          counts2 <-table(new2$year)
+          barplot(counts2, main="Distribution for Taxi's across Years",
+                   xlab="Year")
+```
+
+Looks a bit more flat. So maybe watch out for those taxi's. 
